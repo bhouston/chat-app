@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Chat, Message } from '../types';
 import { generateId } from '../utils';
+import { useAuth } from './AuthContext';
 
 interface ChatContextType {
   chats: Chat[];
@@ -15,18 +16,26 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'chat_app_data';
+const STORAGE_KEY_PREFIX = 'chat_app_data_';
+
+// Get user-specific storage key
+const getUserStorageKey = (userId: string | undefined) => 
+  userId ? `${STORAGE_KEY_PREFIX}${userId}` : STORAGE_KEY_PREFIX;
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Load chats from storage on initial render
+  // Load chats from storage on initial render or when user changes
   useEffect(() => {
     const loadChats = async () => {
       try {
-        const storedChats = await AsyncStorage.getItem(STORAGE_KEY);
+        setIsLoading(true);
+        const storageKey = getUserStorageKey(user?.id);
+        const storedChats = await AsyncStorage.getItem(storageKey);
+        
         if (storedChats) {
           const parsedChats = JSON.parse(storedChats) as Chat[];
           setChats(parsedChats);
@@ -40,23 +49,44 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         } else {
           // Create a new chat if none exist
-          createNewChat();
+          setChats([]);
+          setCurrentChat(null);
+          // We'll create a new chat after loading completes
         }
       } catch (error) {
         console.error('Failed to load chats:', error);
+        setChats([]);
+        setCurrentChat(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadChats();
-  }, []);
+    if (user) {
+      loadChats();
+    } else {
+      // Reset state when user is not logged in
+      setChats([]);
+      setCurrentChat(null);
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  // Create initial chat if needed
+  useEffect(() => {
+    if (!isLoading && user && chats.length === 0) {
+      createNewChat();
+    }
+  }, [isLoading, user, chats.length]);
 
   // Save chats to storage whenever they change
   useEffect(() => {
     const saveChats = async () => {
+      if (!user) return; // Don't save if no user is logged in
+      
       try {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+        const storageKey = getUserStorageKey(user.id);
+        await AsyncStorage.setItem(storageKey, JSON.stringify(chats));
       } catch (error) {
         console.error('Failed to save chats:', error);
       }
@@ -65,7 +95,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (chats.length > 0) {
       saveChats();
     }
-  }, [chats]);
+  }, [chats, user]);
 
   const createNewChat = () => {
     const newChat: Chat = {

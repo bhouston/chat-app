@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiConfig } from '../types';
 import { updateApiKey, validateApiKey } from '../services/anthropicService';
+import { useAuth } from './AuthContext';
 
 interface ApiContextType {
   apiConfig: ApiConfig;
@@ -13,7 +14,11 @@ interface ApiContextType {
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
 
-const API_CONFIG_KEY = 'chat_app_api_config';
+const API_CONFIG_KEY_PREFIX = 'chat_app_api_config_';
+
+// Get user-specific storage key
+const getUserApiConfigKey = (userId: string | undefined) => 
+  userId ? `${API_CONFIG_KEY_PREFIX}${userId}` : API_CONFIG_KEY_PREFIX;
 
 const DEFAULT_CONFIG: ApiConfig = {
   apiKey: '',
@@ -21,16 +26,25 @@ const DEFAULT_CONFIG: ApiConfig = {
 };
 
 export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_CONFIG);
   const [isConfigured, setIsConfigured] = useState<boolean>(false);
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Load API configuration from storage on initial render
+  // Load API configuration from storage when user changes
   useEffect(() => {
     const loadApiConfig = async () => {
       try {
-        const storedConfig = await AsyncStorage.getItem(API_CONFIG_KEY);
+        if (!user) {
+          setApiConfig(DEFAULT_CONFIG);
+          setIsConfigured(false);
+          return;
+        }
+        
+        const configKey = getUserApiConfigKey(user.id);
+        const storedConfig = await AsyncStorage.getItem(configKey);
+        
         if (storedConfig) {
           const parsedConfig = JSON.parse(storedConfig) as ApiConfig;
           setApiConfig(parsedConfig);
@@ -40,20 +54,32 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (parsedConfig.apiKey) {
             updateApiKey(parsedConfig.apiKey);
           }
+        } else {
+          // Reset to default when no stored config for this user
+          setApiConfig(DEFAULT_CONFIG);
+          setIsConfigured(false);
         }
       } catch (error) {
         console.error('Failed to load API configuration:', error);
+        setApiConfig(DEFAULT_CONFIG);
+        setIsConfigured(false);
       }
     };
 
     loadApiConfig();
-  }, []);
+  }, [user]);
 
   const updateConfig = async (config: Partial<ApiConfig>): Promise<boolean> => {
     setIsValidating(true);
     setValidationError(null);
     
     try {
+      if (!user) {
+        setValidationError('You must be logged in to update API configuration.');
+        setIsValidating(false);
+        return false;
+      }
+      
       const newConfig = { ...apiConfig, ...config };
       
       // Validate the API key if it's being updated
@@ -70,7 +96,8 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
       
       // Save the updated configuration
-      await AsyncStorage.setItem(API_CONFIG_KEY, JSON.stringify(newConfig));
+      const configKey = getUserApiConfigKey(user.id);
+      await AsyncStorage.setItem(configKey, JSON.stringify(newConfig));
       
       // Update the state
       setApiConfig(newConfig);
