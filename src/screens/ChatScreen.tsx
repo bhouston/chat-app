@@ -3,20 +3,21 @@ import {
   View, 
   FlatList, 
   StyleSheet, 
-  TouchableOpacity, 
-  Text, 
-  ActivityIndicator,
+  Modal,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { useChat as useChatContext } from '../contexts/ChatContext';
 import { useChat as useChatHook } from '../hooks/useChat';
 import { useApi } from '../contexts/ApiContext';
+import ChatHeader from '../components/ChatHeader';
 import MessageBubble from '../components/MessageBubble';
 import MessageInput from '../components/MessageInput';
+import EmptyState from '../components/EmptyState';
+import LoadingIndicator from '../components/LoadingIndicator';
+import ApiSettingsScreen from '../screens/ApiSettingsScreen';
 import { Message } from '../types';
 
 interface ChatScreenProps {
@@ -94,21 +95,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ onOpenChatList }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={onOpenChatList}
-          >
-            <Icon name="menu" size={24} color="#000000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{currentChat?.title || 'New Chat'}</Text>
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={createNewChat}
-          >
-            <Icon name="add" size={24} color="#000000" />
-          </TouchableOpacity>
-        </View>
+        <ChatHeader 
+          title={currentChat?.title || 'New Chat'}
+          onOpenChatList={onOpenChatList}
+          onNewChat={createNewChat}
+          onOpenSettings={() => setShowApiSettings(true)}
+        />
         
         <View style={styles.content}>
           {currentChat?.messages && currentChat.messages.length > 0 ? (
@@ -120,22 +112,30 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ onOpenChatList }) => {
               contentContainerStyle={styles.messagesContainer}
             />
           ) : (
-            <View style={styles.emptyContainer}>
-              <Icon name="chatbubble-ellipses-outline" size={48} color="#8E8E93" />
-              <Text style={styles.emptyText}>Start a conversation</Text>
-            </View>
+            <EmptyState 
+              icon="chatbubble-ellipses-outline"
+              title="Start a conversation"
+              message="Type a message below to start chatting with Claude"
+            />
           )}
           
           {isLoading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#0084FF" />
-              <Text style={styles.loadingText}>Thinking...</Text>
+            <View style={styles.loadingOverlay}>
+              <LoadingIndicator text="Thinking..." transparent />
             </View>
           )}
         </View>
         
         <MessageInput onSend={handleSendMessage} isLoading={isLoading} />
       </KeyboardAvoidingView>
+      
+      <Modal
+        visible={showApiSettings}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <ApiSettingsScreen onClose={() => setShowApiSettings(false)} />
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -148,27 +148,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    backgroundColor: '#FFFFFF',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   content: {
     flex: 1,
     backgroundColor: '#F5F5F5',
@@ -177,27 +156,14 @@ const styles = StyleSheet.create({
     padding: 8,
     paddingBottom: 16,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#8E8E93',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
+  loadingOverlay: {
+    position: 'absolute',
+    bottom: 16,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-  },
-  loadingText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#8E8E93',
+    zIndex: 100,
   },
 });
 

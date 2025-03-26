@@ -2,7 +2,7 @@ import React from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, Text, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useChat } from '../contexts/ChatContext';
-import { formatDate, truncateText } from '../utils';
+import EmptyState from '../components/EmptyState';
 import ChatListItem from '../components/ChatListItem';
 
 interface ChatListScreenProps {
@@ -56,9 +56,11 @@ const ChatListScreen: React.FC<ChatListScreenProps> = ({ onClose }) => {
             )}
           />
         ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No conversations yet</Text>
-          </View>
+          <EmptyState
+            icon="chatbubbles-outline"
+            title="No conversations yet"
+            message="Start a new chat to begin"
+          />
         )}
       </View>
     </SafeAreaView>
@@ -106,15 +108,7 @@ const styles = StyleSheet.create({
     color: '#0084FF',
     fontWeight: '500',
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#8E8E93',
-  },
+
 });
 
 export default ChatListScreen;
