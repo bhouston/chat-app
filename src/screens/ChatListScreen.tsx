@@ -3,6 +3,7 @@ import { View, FlatList, StyleSheet, TouchableOpacity, Text, SafeAreaView } from
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useChat } from '../contexts/ChatContext';
 import { formatDate, truncateText } from '../utils';
+import ChatListItem from '../components/ChatListItem';
 
 interface ChatListScreenProps {
   onClose: () => void;
@@ -19,29 +20,6 @@ const ChatListScreen: React.FC<ChatListScreenProps> = ({ onClose }) => {
   const handleNewChat = () => {
     createNewChat();
     onClose();
-  };
-
-  // Render each chat item
-  const renderChatItem = ({ item }: { item: any }) => {
-    const isSelected = currentChat?.id === item.id;
-    const lastMessage = item.messages.length > 0 
-      ? item.messages[item.messages.length - 1] 
-      : null;
-      
-    const lastMessagePreview = lastMessage 
-      ? truncateText(lastMessage.content, 40)
-      : 'No messages yet';
-
-    return (
-      <TouchableOpacity 
-        style={[styles.chatItem, isSelected && styles.selectedChatItem]} 
-        onPress={() => handleSelectChat(item.id)}
-      >
-        <Text style={styles.chatTitle}>{truncateText(item.title, 25)}</Text>
-        <Text style={styles.chatPreview}>{lastMessagePreview}</Text>
-        <Text style={styles.chatTimestamp}>{formatDate(item.updatedAt)}</Text>
-      </TouchableOpacity>
-    );
   };
 
   return (
@@ -69,7 +47,13 @@ const ChatListScreen: React.FC<ChatListScreenProps> = ({ onClose }) => {
           <FlatList
             data={chats}
             keyExtractor={(item) => item.id}
-            renderItem={renderChatItem}
+            renderItem={({ item }) => (
+              <ChatListItem 
+                chat={item} 
+                onSelect={handleSelectChat} 
+                isSelected={currentChat?.id === item.id}
+              />
+            )}
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -121,29 +105,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0084FF',
     fontWeight: '500',
-  },
-  chatItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  selectedChatItem: {
-    backgroundColor: '#E9F5FF',
-  },
-  chatTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  chatPreview: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 4,
-  },
-  chatTimestamp: {
-    fontSize: 12,
-    color: '#8E8E93',
-    alignSelf: 'flex-end',
   },
   emptyContainer: {
     flex: 1,

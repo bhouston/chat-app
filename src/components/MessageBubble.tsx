@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Message } from '../types';
+import { formatDate } from '../utils';
 
 interface MessageBubbleProps {
   message: Message;
@@ -26,7 +27,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         </Text>
       </View>
       <Text style={styles.timestamp}>
-        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {formatDate(message.timestamp)}
       </Text>
     </View>
   );

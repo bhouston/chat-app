@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Chat, Message } from '../types';
+import { generateId } from '../utils';
 
 interface ChatContextType {
   chats: Chat[];
@@ -15,12 +16,6 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'chat_app_data';
-
-// Helper function to generate a unique ID
-const generateId = (): string => {
-  return Math.random().toString(36).substring(2, 15) + 
-         Math.random().toString(36).substring(2, 15);
-};
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [chats, setChats] = useState<Chat[]>([]);
