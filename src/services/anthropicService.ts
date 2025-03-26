@@ -3,7 +3,7 @@ import { Message } from '../types';
 
 // TODO: Replace with a secure way to store the API key
 // For now, this is a placeholder that will be replaced with the actual key
-const ANTHROPIC_API_KEY = 'YOUR_ANTHROPIC_API_KEY';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 // Initialize the Anthropic client
 const anthropic = new Anthropic({
